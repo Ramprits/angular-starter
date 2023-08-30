@@ -1,30 +1,33 @@
 import { Injectable } from '@angular/core';
 import { HttpEvent, HttpInterceptor, HttpHandler, HttpRequest } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { environment } from '@env/environment';
 import { Logger } from '../logger.service';
 
-const log = new Logger('ErrorHandlerInterceptor');
-
-/**
- * Adds a default error handler to all requests.
- */
 @Injectable({
   providedIn: 'root',
 })
 export class ErrorHandlerInterceptor implements HttpInterceptor {
-  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    return next.handle(request).pipe(catchError((error) => this.errorHandler(error)));
+  private log: Logger;
+
+  constructor() {
+    this.log = new Logger('ErrorHandlerInterceptor');
   }
 
-  // Customize the default error handler here if needed
-  private errorHandler(response: HttpEvent<any>): Observable<HttpEvent<any>> {
+  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    return next.handle(request).pipe(
+      catchError((error) => {
+        this.errorHandler(error);
+        return throwError(error);
+      })
+    );
+  }
+
+  private errorHandler(error: any): void {
     if (!environment.production) {
-      // Do something with the error
-      log.error('Request error', response);
+      this.log.error('Request error', error);
     }
-    throw response;
   }
 }
